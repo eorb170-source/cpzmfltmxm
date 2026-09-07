@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>업무 체크리스트</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <nav class="tabbar">
+      <button class="tab-btn active" data-tab="today">오늘의 체크리스트</button>
+      <button class="tab-btn" data-tab="tasks">업무 관리</button>
+      <button class="tab-btn" data-tab="history">이력</button>
+      <button class="tab-btn" data-tab="report">연봉협상 자료</button>
+      <button class="tab-btn" data-tab="settings">설정</button>
+    </nav>
+
+    <main class="content">
+      <!-- 오늘의 체크리스트 -->
+      <section id="tab-today" class="tab-panel active">
+        <header class="panel-header">
+          <h1>오늘의 체크리스트</h1>
+          <span id="today-date" class="muted"></span>
+        </header>
+        <div id="today-groups"></div>
+      </section>
+
+      <!-- 업무 관리 -->
+      <section id="tab-tasks" class="tab-panel">
+        <header class="panel-header">
+          <h1>업무 관리</h1>
+          <button id="btn-new-task" class="primary">+ 새 업무 추가</button>
+        </header>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>업무명</th><th>분류</th><th>주기</th><th>예정 시간</th><th>알림</th><th>상태</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="tasks-tbody"></tbody>
+        </table>
+      </section>
+
+      <!-- 이력 -->
+      <section id="tab-history" class="tab-panel">
+        <header class="panel-header">
+          <h1>이력</h1>
+        </header>
+        <div class="filter-row">
+          <label>시작일 <input type="date" id="history-start" /></label>
+          <label>종료일 <input type="date" id="history-end" /></label>
+          <label>상태
+            <select id="history-status">
+              <option value="">전체</option>
+              <option value="done">완료</option>
+              <option value="pending">대기</option>
+              <option value="missed">미완료(경과)</option>
+            </select>
+          </label>
+          <button id="btn-history-search">조회</button>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>날짜</th><th>업무명</th><th>분류</th><th>주기</th><th>상태</th><th>완료 시각</th></tr></thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+      </section>
+
+      <!-- 연봉협상 자료 -->
+      <section id="tab-report" class="tab-panel">
+        <header class="panel-header">
+          <h1>연봉협상 자료</h1>
+        </header>
+        <div class="filter-row">
+          <label>시작일 <input type="date" id="report-start" /></label>
+          <label>종료일 <input type="date" id="report-end" /></label>
+          <button id="btn-report-generate">자료 생성</button>
+          <button id="btn-report-pdf" class="primary">PDF로 저장</button>
+        </div>
+        <div id="report-result"></div>
+      </section>
+
+      <!-- 설정 -->
+      <section id="tab-settings" class="tab-panel">
+        <header class="panel-header">
+          <h1>설정</h1>
+        </header>
+        <div class="settings-form">
+          <label class="switch-row">
+            <input type="checkbox" id="setting-notifications" />
+            데스크톱 알림 사용
+          </label>
+          <label>
+            기본 알림 반복 간격(분)
+            <input type="number" id="setting-interval" min="1" />
+          </label>
+          <button id="btn-settings-save" class="primary">저장</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 업무 생성/수정 모달 -->
+  <div id="task-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2 id="task-modal-title">새 업무 추가</h2>
+      <form id="task-form">
+        <input type="hidden" id="task-id" />
+        <label>업무명 <input type="text" id="task-title" required /></label>
+        <label>분류(카테고리) <input type="text" id="task-category" placeholder="예: 안전점검, 재고관리" /></label>
+
+        <label>반복 유형
+          <select id="task-repeat-type">
+            <option value="daily">데일리 (매일)</option>
+            <option value="weekly">위클리 (매주 특정 요일)</option>
+            <option value="monthly">먼슬리 (매월 특정 일자)</option>
+            <option value="yearly">연간 (매년 특정 날짜)</option>
+            <option value="once">단발성 (특정 날짜 1회)</option>
+          </select>
+        </label>
+
+        <div id="repeat-config-weekly" class="repeat-config hidden">
+          <span>요일 선택</span>
+          <div class="weekday-picker">
+            <label><input type="checkbox" value="1" /> 월</label>
+            <label><input type="checkbox" value="2" /> 화</label>
+            <label><input type="checkbox" value="3" /> 수</label>
+            <label><input type="checkbox" value="4" /> 목</label>
+            <label><input type="checkbox" value="5" /> 금</label>
+            <label><input type="checkbox" value="6" /> 토</label>
+            <label><input type="checkbox" value="7" /> 일</label>
+          </div>
+        </div>
+
+        <div id="repeat-config-monthly" class="repeat-config hidden">
+          <label>매월 <input type="number" id="repeat-monthly-day" min="1" max="31" /> 일</label>
+        </div>
+
+        <div id="repeat-config-yearly" class="repeat-config hidden">
+          <label>월 <input type="number" id="repeat-yearly-month" min="1" max="12" /></label>
+          <label>일 <input type="number" id="repeat-yearly-day" min="1" max="31" /></label>
+        </div>
+
+        <div id="repeat-config-once" class="repeat-config hidden">
+          <label>날짜 <input type="date" id="repeat-once-date" /></label>
+        </div>
+
+        <label>예정 시간 (선택) <input type="time" id="task-due-time" /></label>
+        <label class="switch-row"><input type="checkbox" id="task-reminder-enabled" checked /> 예정 시간 경과 시 알림</label>
+        <label>알림 반복 간격(분) <input type="number" id="task-reminder-interval" min="1" value="30" /></label>
+        <label>메모 <textarea id="task-memo" rows="2"></textarea></label>
+
+        <div class="modal-actions">
+          <button type="button" id="btn-task-cancel">취소</button>
+          <button type="submit" class="primary">저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,16 +1,114 @@
 'use strict';
 
+// sql.js는 순수 WebAssembly로 동작하는 SQLite라, Node/Electron 버전이 바뀌거나
+// 사용자 PC에 C++ 빌드 도구가 없어도 별도 컴파일 없이 그대로 설치/실행됩니다.
+// (better-sqlite3 같은 네이티브 모듈은 Node/Electron 버전마다 다시 빌드해야 해서
+//  Visual Studio Build Tools 같은 게 없는 PC에서 설치가 실패하는 문제가 있었습니다.)
+
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
 
-let db;
+let dbPath;
+let rawDb;
+let inTransaction = false;
 
-function init(userDataDir) {
+function persist() {
+  if (inTransaction) return;
+  const data = rawDb.export();
+  fs.writeFileSync(dbPath, Buffer.from(data));
+}
+
+function toParamList(args) {
+  if (args.length === 1 && args[0] && typeof args[0] === 'object' && !Array.isArray(args[0])) {
+    const named = {};
+    for (const [key, value] of Object.entries(args[0])) named[`@${key}`] = value;
+    return named;
+  }
+  return args;
+}
+
+function bindAndRun(sql, args, collect) {
+  const stmt = rawDb.prepare(sql);
+  try {
+    const params = toParamList(args);
+    if (Array.isArray(params) ? params.length : Object.keys(params).length) {
+      stmt.bind(params);
+    }
+    return collect(stmt);
+  } finally {
+    stmt.free();
+  }
+}
+
+function makeStatement(sql) {
+  return {
+    run(...args) {
+      bindAndRun(sql, args, (stmt) => stmt.step());
+      const idRow = rawDb.exec('SELECT last_insert_rowid() AS id');
+      const lastInsertRowid = idRow.length ? idRow[0].values[0][0] : 0;
+      const changes = rawDb.getRowsModified();
+      persist();
+      return { lastInsertRowid, changes };
+    },
+    get(...args) {
+      return bindAndRun(sql, args, (stmt) => (stmt.step() ? stmt.getAsObject() : undefined));
+    },
+    all(...args) {
+      return bindAndRun(sql, args, (stmt) => {
+        const rows = [];
+        while (stmt.step()) rows.push(stmt.getAsObject());
+        return rows;
+      });
+    }
+  };
+}
+
+const db = {
+  exec(sql) {
+    rawDb.exec(sql);
+    persist();
+  },
+  pragma(statement) {
+    try {
+      rawDb.run(`PRAGMA ${statement}`);
+    } catch (err) {
+      // sql.js는 journal_mode 같은 일부 pragma를 지원하지 않을 수 있으므로 무시합니다.
+    }
+  },
+  prepare(sql) {
+    return makeStatement(sql);
+  },
+  transaction(fn) {
+    return (...args) => {
+      rawDb.exec('BEGIN');
+      inTransaction = true;
+      try {
+        const result = fn(...args);
+        rawDb.exec('COMMIT');
+        inTransaction = false;
+        persist();
+        return result;
+      } catch (err) {
+        inTransaction = false;
+        rawDb.exec('ROLLBACK');
+        throw err;
+      }
+    };
+  }
+};
+
+async function init(userDataDir) {
   fs.mkdirSync(userDataDir, { recursive: true });
-  const dbPath = path.join(userDataDir, 'work-checklist.db');
-  db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
+  dbPath = path.join(userDataDir, 'work-checklist.db');
+
+  const SQL = await initSqlJs({
+    locateFile: (file) => path.join(__dirname, '..', 'node_modules', 'sql.js', 'dist', file)
+  });
+
+  const existing = fs.existsSync(dbPath) ? fs.readFileSync(dbPath) : null;
+  rawDb = existing ? new SQL.Database(existing) : new SQL.Database();
+
   db.pragma('foreign_keys = ON');
 
   db.exec(`
@@ -62,7 +160,7 @@ function init(userDataDir) {
 }
 
 function getDb() {
-  if (!db) throw new Error('DB가 초기화되지 않았습니다.');
+  if (!rawDb) throw new Error('DB가 초기화되지 않았습니다.');
   return db;
 }
 

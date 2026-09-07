@@ -209,8 +209,8 @@ function registerIpcHandlers() {
   });
 }
 
-app.whenReady().then(() => {
-  db = dbModule.init(path.join(app.getPath('userData')));
+app.whenReady().then(async () => {
+  db = await dbModule.init(path.join(app.getPath('userData')));
   registerIpcHandlers();
   createWindow();
   schedulerHandle = scheduler.start(db);

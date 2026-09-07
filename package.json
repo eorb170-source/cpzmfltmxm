@@ -5,15 +5,10 @@
   "main": "electron/main.js",
   "private": true,
   "scripts": {
-    "postinstall": "electron-rebuild -f -w better-sqlite3",
     "start": "electron .",
     "dist": "electron-builder"
   },
-  "dependencies": {
-    "better-sqlite3": "^11.3.0"
-  },
   "devDependencies": {
-    "@electron/rebuild": "^4.2.0",
     "electron": "^32.0.0",
     "electron-builder": "^25.0.0"
   },
@@ -43,5 +38,8 @@
         "nsis"
       ]
     }
+  },
+  "dependencies": {
+    "sql.js": "^1.14.2"
   }
 }

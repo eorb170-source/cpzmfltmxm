@@ -25,6 +25,21 @@ body {
   height: 100vh;
 }
 
+.update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 8px 16px;
+  font-size: 13px;
+  text-align: center;
+  background: var(--primary);
+  color: #fff;
+}
+.update-banner.hidden { display: none; }
+.update-banner.error { background: var(--missed); }
+
 .tabbar {
   width: 190px;
   flex-shrink: 0;

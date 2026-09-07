@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "dist": "electron-builder --publish never",
+    "release": "electron-builder --publish always"
   },
   "devDependencies": {
     "electron": "^32.0.0",
@@ -23,6 +24,13 @@
     "directories": {
       "output": "dist"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "eorb170-source",
+        "repo": "cpzmfltmxm"
+      }
+    ],
     "linux": {
       "target": [
         "AppImage"
@@ -40,6 +48,7 @@
     }
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "sql.js": "^1.14.2"
   }
 }

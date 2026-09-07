@@ -23,5 +23,12 @@ contextBridge.exposeInMainWorld('api', {
 
   // 설정
   getSettings: () => ipcRenderer.invoke('settings:get'),
-  updateSettings: (patch) => ipcRenderer.invoke('settings:update', patch)
+  updateSettings: (patch) => ipcRenderer.invoke('settings:update', patch),
+
+  // 자동 업데이트 상태 알림
+  onUpdateStatus: (callback) => {
+    const listener = (event, payload) => callback(payload);
+    ipcRenderer.on('update:status', listener);
+    return () => ipcRenderer.removeListener('update:status', listener);
+  }
 });

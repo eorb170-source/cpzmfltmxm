@@ -7,6 +7,7 @@ const os = require('os');
 const dbModule = require('./db');
 const scheduler = require('./scheduler');
 const reports = require('./reports');
+const updater = require('./updater');
 const { todayStr } = require('./dateUtils');
 
 let mainWindow;
@@ -214,6 +215,7 @@ app.whenReady().then(async () => {
   registerIpcHandlers();
   createWindow();
   schedulerHandle = scheduler.start(db);
+  updater.setup(mainWindow);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

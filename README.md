@@ -24,7 +24,32 @@ npm start
 npm run dist
 ```
 
-`electron-builder` 설정에 따라 `dist/` 폴더에 OS별 설치 파일이 생성됩니다(현재 설정: Windows nsis / macOS dmg / Linux AppImage).
+Windows에서 실행하면 `dist/` 폴더에 `업무 체크리스트 Setup 1.0.0.exe` 같은 설치 파일이 생성됩니다. 이 파일을 더블클릭해서 설치하면, `npm start`로 켜는 개발용 실행과 달리 시작 메뉴/바탕화면 아이콘이 생기고 "프로그램 추가/제거"에도 정상적으로 등록되는 **진짜 설치된 프로그램**이 됩니다.
+
+(macOS는 dmg, Linux는 AppImage로 생성됩니다.)
+
+## 자동 업데이트 (반드시 최신 버전으로 유지)
+
+이 앱은 **GitHub Releases**를 업데이트 서버로 사용합니다. 즉, 이 저장소(`eorb170-source/cpzmfltmxm`)에 새 버전을 릴리스로 올리면, 설치되어 있는 프로그램이 실행될 때(그리고 실행 중에도 4시간마다) 자동으로 감지해서 **다운로드 → 사용자 동의 없이 자동으로 재시작하며 설치**합니다. 화면 위에 진행 상황이 배너로 표시됩니다.
+
+> ⚠️ 자동 업데이트는 `npm start`(개발 모드)에서는 동작하지 않고, `npm run dist`로 만든 **설치된(installed) 프로그램에서만** 동작합니다.
+
+### 새 버전을 배포하는 방법 (유지보수자용)
+
+1. `package.json`의 `"version"` 값을 올립니다 (예: `1.0.0` → `1.0.1`). 이 버전 번호로 업데이트 여부를 판단하므로 **반드시 올려야** 합니다.
+2. GitHub에 올릴 수 있는 권한이 있는 [Personal Access Token](https://github.com/settings/tokens)을 하나 만듭니다 (권한 범위: `repo`).
+3. 터미널에서 토큰을 환경 변수로 설정하고 릴리스 명령을 실행합니다.
+
+   Windows(cmd) 기준:
+   ```
+   set GH_TOKEN=여기에_토큰_붙여넣기
+   npm run release
+   ```
+
+   이 명령은 설치 파일을 빌드하고, GitHub 저장소에 새 릴리스를 만들어 설치 파일과 업데이트 정보(`latest.yml`)를 자동으로 업로드합니다.
+4. 이후 사용자 PC에서 실행 중이거나 다음에 실행되는 프로그램이 새 버전을 자동으로 받아 설치합니다.
+
+`npm run dist`(로컬 테스트용 빌드, 릴리스 업로드 안 함)와 `npm run release`(실제 배포용, GitHub Releases에 업로드)를 상황에 맞게 구분해서 사용하세요.
 
 ## 폴더 구조
 
@@ -36,6 +61,7 @@ electron/
   scheduler.js   # 반복 업무 인스턴스 생성 + 미체크 알림 로직
   reports.js     # 연봉협상 자료(집계/HTML/PDF) 생성 로직
   dateUtils.js   # 날짜/반복 규칙 계산 유틸
+  updater.js     # GitHub Releases 기반 자동 업데이트(강제 적용) 로직
 renderer/
   index.html     # 화면 구조 (탭: 오늘/업무 관리/이력/연봉협상 자료/설정)
   app.js         # 화면 로직

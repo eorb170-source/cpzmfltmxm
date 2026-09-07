@@ -366,9 +366,46 @@ function setupSettings() {
   });
 }
 
+// ---------- 자동 업데이트 상태 배너 ----------
+function setupUpdateBanner() {
+  if (!window.api.onUpdateStatus) return;
+  const banner = $('#update-banner');
+  window.api.onUpdateStatus((payload) => {
+    banner.classList.remove('error');
+    switch (payload.state) {
+      case 'checking':
+        banner.textContent = '업데이트 확인 중...';
+        banner.classList.remove('hidden');
+        break;
+      case 'downloading':
+        banner.textContent = payload.percent != null
+          ? `새 버전(${payload.version || ''}) 다운로드 중... ${payload.percent}%`
+          : `새 버전(${payload.version || ''})을 다운로드하고 있습니다...`;
+        banner.classList.remove('hidden');
+        break;
+      case 'ready':
+        banner.textContent = `업데이트 준비 완료. 곧 자동으로 재시작되어 새 버전(${payload.version})이 적용됩니다.`;
+        banner.classList.remove('hidden');
+        break;
+      case 'up-to-date':
+        banner.classList.add('hidden');
+        break;
+      case 'error':
+        banner.textContent = '업데이트 확인에 실패했습니다 (오프라인일 수 있어요). 프로그램은 계속 사용할 수 있습니다.';
+        banner.classList.add('error');
+        banner.classList.remove('hidden');
+        setTimeout(() => banner.classList.add('hidden'), 5000);
+        break;
+      default:
+        break;
+    }
+  });
+}
+
 // ---------- 초기화 ----------
 function init() {
   setupTabs();
+  setupUpdateBanner();
   setupTaskForm();
   setupHistory();
   setupReport();

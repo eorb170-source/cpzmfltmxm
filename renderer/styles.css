@@ -193,6 +193,15 @@ button.primary:hover { background: var(--primary-dark); }
   flex-direction: column;
   gap: 14px;
   max-width: 360px;
+  margin-bottom: 16px;
+}
+
+.settings-form.danger-zone {
+  border-color: var(--missed);
+}
+.settings-form.danger-zone button {
+  border-color: var(--missed);
+  color: var(--missed);
 }
 
 .switch-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }

@@ -354,6 +354,10 @@ async function loadSettings() {
   const settings = await window.api.getSettings();
   $('#setting-notifications').checked = settings.notifications_enabled === '1';
   $('#setting-interval').value = settings.default_reminder_interval || 30;
+
+  if (window.api.getAppVersion) {
+    $('#setting-app-version').textContent = await window.api.getAppVersion();
+  }
 }
 
 function setupSettings() {
@@ -363,6 +367,19 @@ function setupSettings() {
       default_reminder_interval: Number($('#setting-interval').value) || 30
     });
     alert('설정이 저장되었습니다.');
+  });
+
+  $('#btn-check-update').addEventListener('click', () => {
+    window.api.checkForUpdateNow();
+  });
+
+  $('#btn-reset-data').addEventListener('click', async () => {
+    if (!confirm('정말로 이 PC의 모든 업무와 이력을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+    if (!confirm('마지막 확인입니다. 정말 전부 초기화할까요?')) return;
+    await window.api.resetAllData();
+    alert('초기화되었습니다.');
+    loadToday();
+    loadTasks();
   });
 }
 
@@ -388,7 +405,9 @@ function setupUpdateBanner() {
         banner.classList.remove('hidden');
         break;
       case 'up-to-date':
-        banner.classList.add('hidden');
+        banner.textContent = `이미 최신 버전(${payload.version || ''})입니다.`;
+        banner.classList.remove('hidden');
+        setTimeout(() => banner.classList.add('hidden'), 3000);
         break;
       case 'error':
         banner.textContent = '업데이트 확인에 실패했습니다 (오프라인일 수 있어요). 프로그램은 계속 사용할 수 있습니다.';

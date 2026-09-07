@@ -208,6 +208,18 @@ function registerIpcHandlers() {
     tx(Object.entries(patch));
     return true;
   });
+
+  ipcMain.handle('app:getVersion', () => app.getVersion());
+
+  ipcMain.handle('app:checkForUpdate', () => {
+    updater.checkForUpdateNow();
+    return true;
+  });
+
+  ipcMain.handle('data:resetAll', () => {
+    db.resetAllData();
+    return true;
+  });
 }
 
 app.whenReady().then(async () => {

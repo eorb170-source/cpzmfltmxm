@@ -13,6 +13,16 @@ let dbPath;
 let rawDb;
 let inTransaction = false;
 
+// 스키마 버전. 다음 배포 때 tasks/task_instances 테이블 구조를 바꿔야 하면
+// SCHEMA_VERSION을 1 올리고, 아래 MIGRATIONS 객체에 같은 번호로
+// "옛날 스키마 -> 새 스키마"로 바꾸는 ALTER TABLE 등을 추가하세요.
+// 이렇게 해두면 이미 설치되어 데이터가 쌓여있는 사용자가 자동 업데이트를 받아도
+// 기존 체크리스트 데이터가 사라지거나 앱이 깨지지 않고, 필요한 변경만 적용됩니다.
+const SCHEMA_VERSION = 1;
+const MIGRATIONS = {
+  // 예시) 2: () => { rawDb.exec("ALTER TABLE tasks ADD COLUMN priority INTEGER DEFAULT 0"); }
+};
+
 function persist() {
   if (inTransaction) return;
   const data = rawDb.export();
@@ -95,6 +105,13 @@ const db = {
         throw err;
       }
     };
+  },
+  // 이 PC에 저장된 모든 업무/이력을 지웁니다. 알림·기본 설정 값은 유지됩니다.
+  // 다른 사람에게 이 PC(또는 이 프로그램)를 넘길 때 내 업무 데이터가 보이지 않도록
+  // 설정 화면에서 이 기능을 호출합니다.
+  resetAllData() {
+    rawDb.exec('DELETE FROM task_instances; DELETE FROM tasks;');
+    persist();
   }
 };
 
@@ -106,11 +123,15 @@ async function init(userDataDir) {
     locateFile: (file) => path.join(__dirname, '..', 'node_modules', 'sql.js', 'dist', file)
   });
 
-  const existing = fs.existsSync(dbPath) ? fs.readFileSync(dbPath) : null;
+  const isExistingDb = fs.existsSync(dbPath);
+  const existing = isExistingDb ? fs.readFileSync(dbPath) : null;
   rawDb = existing ? new SQL.Database(existing) : new SQL.Database();
 
   db.pragma('foreign_keys = ON');
 
+  // 아래 CREATE TABLE은 항상 "최신" 스키마 기준입니다. 새로 설치하는 사용자는
+  // 이 스키마로 바로 시작하고, 이미 데이터가 있던 사용자는 MIGRATIONS를 거쳐
+  // 같은 최신 스키마로 맞춰집니다.
   db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,6 +166,20 @@ async function init(userDataDir) {
       value TEXT NOT NULL
     );
   `);
+
+  if (isExistingDb) {
+    // 기존에 쓰던 DB 파일이면, 그 파일이 기록하고 있는 스키마 버전부터
+    // 최신 버전까지 필요한 마이그레이션만 순서대로 적용합니다.
+    const versionRow = rawDb.exec('PRAGMA user_version');
+    let version = versionRow.length ? versionRow[0].values[0][0] : 0;
+    while (version < SCHEMA_VERSION) {
+      version += 1;
+      const migrate = MIGRATIONS[version];
+      if (migrate) migrate();
+    }
+  }
+  rawDb.run(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+  persist();
 
   const defaults = {
     notifications_enabled: '1',

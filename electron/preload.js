@@ -30,5 +30,10 @@ contextBridge.exposeInMainWorld('api', {
     const listener = (event, payload) => callback(payload);
     ipcRenderer.on('update:status', listener);
     return () => ipcRenderer.removeListener('update:status', listener);
-  }
+  },
+  getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+  checkForUpdateNow: () => ipcRenderer.invoke('app:checkForUpdate'),
+
+  // 데이터 초기화 (다른 사람에게 이 PC/프로그램을 넘길 때 등)
+  resetAllData: () => ipcRenderer.invoke('data:resetAll')
 });
